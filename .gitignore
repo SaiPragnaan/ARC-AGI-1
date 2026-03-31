@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.pkl
+*.pt
+*.pth
+
+checkpoints/
+logs/
+wandb/
+
+.env
