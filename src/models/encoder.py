@@ -3,6 +3,11 @@ import torch.nn as nn
 class Encoder(nn.Module):
     def __init__(self,d_model, nhead, num_layers):
         super().__init__()
+
+        self.d_model=d_model
+        self.nhead=nhead
+        self.num_layers=num_layers
+        
         layer=nn.TransformerEncoderLayer(
                     d_model=d_model,
                     nhead=nhead,

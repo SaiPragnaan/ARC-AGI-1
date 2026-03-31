@@ -4,6 +4,10 @@ import torch.nn as nn
 class LatentTokens(nn.Module):
     def __init__(self,num_tokens,d_model):
         super().__init__()
+        
+        self.num_tokens=num_tokens
+        self.d_model=d_model
+
         self.z=nn.Parameter(torch.randn(num_tokens,d_model))
         self.cross_attn=nn.MultiheadAttention(
             embed_dim=d_model,
