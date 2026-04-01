@@ -1,25 +1,27 @@
 import torch
 import torch.nn as nn
 
-from embedding import GridEmbedding
-from encoder import Encoder
-from latent import LatentTokens
-from decoder_trm_block import ZBlock, YBlock
+from .embedding import GridEmbedding
+from .encoder import Encoder
+from .latent import LatentTokens
+from .decoder_trm_block import TRMBlock
 
 class ARCModel(nn.Module):
     def __init__(self, config):
         super().__init__()
 
         d_model = config["d_model"]
-
+        num_enc_layers=config["num_enc_layers"]
+        nhead=config["nhead"]
+        num_dec_layers=config["num_dec_layers"]
+        
         self.embed = GridEmbedding(d_model)
 
-        self.encoder = Encoder(d_model, nhead=4, num_layers=3)
+        self.encoder = Encoder(d_model, nhead=nhead, num_layers=num_enc_layers)
 
         self.latent = LatentTokens(num_tokens=config["K"], d_model=d_model)
 
-        self.z_block = ZBlock(d_model, nhead=4)
-        self.y_block = YBlock(d_model, nhead=4)
+        self.trm_block = TRMBlock(d_model, nhead=nhead, depth=num_dec_layers)
 
         self.output_head = nn.Linear(d_model, 10)
 
@@ -56,9 +58,11 @@ class ARCModel(nn.Module):
         for _ in range(self.N_sup):
 
             for _ in range(self.n_z):
-                z = self.z_block(x, y, z)
+                context = torch.cat([x, y], dim=1)
+                z = self.trm_block(z, context)
 
-            y = self.y_block(x, y, z)
+            context = torch.cat([x, z], dim=1)       # TODO : try here only z, as its done in TRM paper shi
+            y = self.trm_block(y, context)
 
             logits = self.output_head(y)
             outputs.append(logits)

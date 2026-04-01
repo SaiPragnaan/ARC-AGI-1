@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-class ZBlock(nn.Module):
+class TransformerBlock(nn.Module):
     def __init__(self, d_model, nhead):
         super().__init__()
 
@@ -16,53 +16,31 @@ class ZBlock(nn.Module):
         self.norm1 = nn.LayerNorm(d_model)
         self.norm2 = nn.LayerNorm(d_model)
 
-    def forward(self, x, y, z):
-        """
-        x: (B, Nx, d_model)
-        y: (B, Ny, d_model)
-        z: (B, K, d_model)
-        """
+    def forward(self, q, kv):
+        out, _ = self.attn(q, kv, kv)
+        q = self.norm1(q + out)
 
-        # z attends to x + y
-        context = torch.cat([x, y], dim=1)
+        out = self.ffn(q)
+        q = self.norm2(q + out)
 
-        out, _ = self.attn(z, context, context)
-        z = self.norm1(z + out)
+        return q
 
-        out = self.ffn(z)
-        z = self.norm2(z + out)
-
-        return z
-
-class YBlock(nn.Module):
-    def __init__(self, d_model, nhead):
+class TRMBlock(nn.Module):
+    def __init__(self, d_model, nhead, depth=4):
         super().__init__()
 
-        self.attn = nn.MultiheadAttention(d_model, nhead, batch_first=True)
+        self.layers = nn.ModuleList([
+            TransformerBlock(d_model, nhead)
+            for _ in range(depth)
+        ])
 
-        self.ffn = nn.Sequential(
-            nn.Linear(d_model, d_model * 4),
-            nn.GELU(),
-            nn.Linear(d_model * 4, d_model)
-        )
-
-        self.norm1 = nn.LayerNorm(d_model)
-        self.norm2 = nn.LayerNorm(d_model)
-
-    def forward(self, x, y, z):
+    def forward(self, query, context):
         """
-        x: (B, Nx, d_model)
-        y: (B, Ny, d_model)
-        z: (B, K, d_model)
+        query: (B, *, d_model)
+        context: (B, *, d_model)
         """
 
-        # y attends to x + z
-        context = torch.cat([x, z], dim=1)           # TODO : actual paper does only context=z type shi, no x again
+        for layer in self.layers:
+            query = layer(query, context)
 
-        out, _ = self.attn(y, context, context)
-        y = self.norm1(y + out)
-
-        out = self.ffn(y)
-        y = self.norm2(y + out)
-
-        return y
+        return query

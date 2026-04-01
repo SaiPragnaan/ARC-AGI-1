@@ -1,0 +1,13 @@
+model:
+  d_model: 256
+  nhead: 8
+  num_enc_layers: 6
+  num_dec_layers: 4
+  K: 16
+  N_sup: 4
+  n_z: 2
+
+training:
+  lr: 1e-4
+  batch_size: 1
+  epochs: 20
